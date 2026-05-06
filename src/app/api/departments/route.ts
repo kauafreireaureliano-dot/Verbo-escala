@@ -1,8 +1,7 @@
 export const runtime = 'edge'
 
-import { getRequestContext } from '@cloudflare/next-on-pages'
-import { getDb } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getDB, newId } from '@/lib/db'
 
 function slugify(text: string): string {
   return text
@@ -17,10 +16,9 @@ function slugify(text: string): string {
 
 export async function GET() {
   try {
-    const { env } = getRequestContext()
-    const prisma = getDb(env.DB)
-    const departments = await prisma.department.findMany({ orderBy: { createdAt: 'desc' } })
-    return NextResponse.json(departments)
+    const db = getDB()
+    const { results } = await db.prepare('SELECT * FROM "Department" ORDER BY createdAt DESC').all()
+    return NextResponse.json(results)
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
@@ -28,12 +26,14 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
-    const { env } = getRequestContext()
-    const prisma = getDb(env.DB)
+    const db = getDB()
     const { name, leaderName } = await request.json() as { name: string; leaderName: string }
+    const id = newId()
     const slug = slugify(name) + '-' + Date.now().toString(36)
-    const department = await prisma.department.create({ data: { name, leaderName, slug } })
-    return NextResponse.json(department)
+    await db.prepare('INSERT INTO "Department" (id, name, leaderName, slug) VALUES (?, ?, ?, ?)')
+      .bind(id, name, leaderName, slug).run()
+    const dep = await db.prepare('SELECT * FROM "Department" WHERE id = ?').bind(id).first()
+    return NextResponse.json(dep)
   } catch (e) {
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }

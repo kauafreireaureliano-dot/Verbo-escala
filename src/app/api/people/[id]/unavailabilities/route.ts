@@ -1,27 +1,27 @@
 export const runtime = 'edge'
 
-import { getRequestContext } from '@cloudflare/next-on-pages'
-import { getDb } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getDB, newId } from '@/lib/db'
 
 export async function GET(_request: Request, { params }: { params: { id: string } }) {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  const unavailabilities = await prisma.personUnavailability.findMany({
-    where: { personId: params.id },
-    orderBy: { dayOfWeek: 'asc' },
-  })
-  return NextResponse.json(unavailabilities)
+  try {
+    const db = getDB()
+    const { results } = await db.prepare('SELECT * FROM "PersonUnavailability" WHERE personId = ? ORDER BY dayOfWeek').bind(params.id).all()
+    return NextResponse.json(results)
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
 
 export async function POST(request: Request, { params }: { params: { id: string } }) {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  const { dayOfWeek } = await request.json() as { dayOfWeek: number }
-  const unavailability = await prisma.personUnavailability.upsert({
-    where: { personId_dayOfWeek: { personId: params.id, dayOfWeek } },
-    update: {},
-    create: { personId: params.id, dayOfWeek },
-  })
-  return NextResponse.json(unavailability)
+  try {
+    const db = getDB()
+    const { dayOfWeek } = await request.json() as { dayOfWeek: number }
+    const id = newId()
+    await db.prepare('INSERT OR IGNORE INTO "PersonUnavailability" (id, personId, dayOfWeek) VALUES (?, ?, ?)').bind(id, params.id, dayOfWeek).run()
+    const row = await db.prepare('SELECT * FROM "PersonUnavailability" WHERE personId = ? AND dayOfWeek = ?').bind(params.id, dayOfWeek).first()
+    return NextResponse.json(row)
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

@@ -1,16 +1,18 @@
 export const runtime = 'edge'
 
-import { getRequestContext } from '@cloudflare/next-on-pages'
-import { getDb } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getDB } from '@/lib/db'
 
 export async function GET(_request: Request, { params }: { params: { slug: string } }) {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  const department = await prisma.department.findUnique({
-    where: { slug: params.slug },
-    include: { roles: true, people: true, schedules: { orderBy: { createdAt: 'asc' } } },
-  })
-  if (!department) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  return NextResponse.json(department)
+  try {
+    const db = getDB()
+    const dep = await db.prepare('SELECT * FROM "Department" WHERE slug = ?').bind(params.slug).first()
+    if (!dep) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+    const { results: roles } = await db.prepare('SELECT * FROM "Role" WHERE departmentId = ?').bind(dep.id).all()
+    const { results: people } = await db.prepare('SELECT * FROM "Person" WHERE departmentId = ?').bind(dep.id).all()
+    const { results: schedules } = await db.prepare('SELECT * FROM "Schedule" WHERE departmentId = ? ORDER BY createdAt ASC').bind(dep.id).all()
+    return NextResponse.json({ ...dep, roles, people, schedules })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }

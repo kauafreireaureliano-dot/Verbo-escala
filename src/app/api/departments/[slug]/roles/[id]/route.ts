@@ -1,12 +1,14 @@
 export const runtime = 'edge'
 
-import { getRequestContext } from '@cloudflare/next-on-pages'
-import { getDb } from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getDB } from '@/lib/db'
 
-export async function DELETE(_request: Request, { params }: { params: { slug: string; id: string } }) {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  await prisma.role.delete({ where: { id: params.id } })
-  return NextResponse.json({ ok: true })
+export async function DELETE(_request: Request, { params }: { params: { id: string } }) {
+  try {
+    const db = getDB()
+    await db.prepare('DELETE FROM "Role" WHERE id = ?').bind(params.id).run()
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
