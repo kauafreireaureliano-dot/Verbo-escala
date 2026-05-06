@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server'
 export async function PUT(request: Request, { params }: { params: { id: string; entryId: string } }) {
   const { env } = getRequestContext()
   const prisma = getDb(env.DB)
-  const { personId } = await request.json()
+  const { personId } = await request.json() as { personId: string }
   const entry = await prisma.scheduleEntry.update({
     where: { id: params.entryId },
     data: { personId, isManual: true },

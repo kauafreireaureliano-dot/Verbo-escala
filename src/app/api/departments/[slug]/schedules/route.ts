@@ -23,7 +23,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   const dep = await prisma.department.findUnique({ where: { slug: params.slug } })
   if (!dep) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { name, startDate, endDate, daysOfWeek } = await request.json()
+  const { name, startDate, endDate, daysOfWeek } = await request.json() as { name: string; startDate: string; endDate: string; daysOfWeek: number[] }
 
   const start = new Date(startDate)
   const end = new Date(endDate)

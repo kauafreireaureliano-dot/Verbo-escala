@@ -7,7 +7,7 @@ import { NextResponse } from 'next/server'
 export async function PUT(request: Request, { params }: { params: { slug: string; id: string } }) {
   const { env } = getRequestContext()
   const prisma = getDb(env.DB)
-  const { name, maxServicesPerWeek, roleIds } = await request.json()
+  const { name, maxServicesPerWeek, roleIds } = await request.json() as { name: string; maxServicesPerWeek: number; roleIds: string[] }
   const limitedRoleIds = (roleIds as string[]).slice(0, 2)
   await prisma.personRole.deleteMany({ where: { personId: params.id } })
   const person = await prisma.person.update({

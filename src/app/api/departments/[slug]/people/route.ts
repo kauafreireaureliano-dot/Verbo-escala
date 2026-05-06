@@ -21,7 +21,7 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   const prisma = getDb(env.DB)
   const dep = await prisma.department.findUnique({ where: { slug: params.slug } })
   if (!dep) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-  const { name, maxServicesPerWeek, roleIds } = await request.json()
+  const { name, maxServicesPerWeek, roleIds } = await request.json() as { name: string; maxServicesPerWeek: number; roleIds: string[] }
   const limitedRoleIds = (roleIds as string[]).slice(0, 2)
   const person = await prisma.person.create({
     data: {

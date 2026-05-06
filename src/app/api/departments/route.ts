@@ -25,7 +25,7 @@ export async function GET() {
 export async function POST(request: Request) {
   const { env } = getRequestContext()
   const prisma = getDb(env.DB)
-  const { name, leaderName } = await request.json()
+  const { name, leaderName } = await request.json() as { name: string; leaderName: string }
   const slug = slugify(name) + '-' + Date.now().toString(36)
   const department = await prisma.department.create({ data: { name, leaderName, slug } })
   return NextResponse.json(department)
