@@ -16,17 +16,25 @@ function slugify(text: string): string {
 }
 
 export async function GET() {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  const departments = await prisma.department.findMany({ orderBy: { createdAt: 'desc' } })
-  return NextResponse.json(departments)
+  try {
+    const { env } = getRequestContext()
+    const prisma = getDb(env.DB)
+    const departments = await prisma.department.findMany({ orderBy: { createdAt: 'desc' } })
+    return NextResponse.json(departments)
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
 
 export async function POST(request: Request) {
-  const { env } = getRequestContext()
-  const prisma = getDb(env.DB)
-  const { name, leaderName } = await request.json() as { name: string; leaderName: string }
-  const slug = slugify(name) + '-' + Date.now().toString(36)
-  const department = await prisma.department.create({ data: { name, leaderName, slug } })
-  return NextResponse.json(department)
+  try {
+    const { env } = getRequestContext()
+    const prisma = getDb(env.DB)
+    const { name, leaderName } = await request.json() as { name: string; leaderName: string }
+    const slug = slugify(name) + '-' + Date.now().toString(36)
+    const department = await prisma.department.create({ data: { name, leaderName, slug } })
+    return NextResponse.json(department)
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
 }
