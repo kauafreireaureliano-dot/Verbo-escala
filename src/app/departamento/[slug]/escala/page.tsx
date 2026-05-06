@@ -8,12 +8,11 @@ import Link from 'next/link'
 type Schedule = { id: string; name: string; startDate: string; endDate: string }
 
 const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-const WEEKS_OPTIONS = [1, 2, 3, 4, 6, 8, 12]
 
 export default function EscalaPage({ params }: { params: { slug: string } }) {
   const [schedules, setSchedules] = useState<Schedule[]>([])
   const [startDate, setStartDate] = useState('')
-  const [weeks, setWeeks] = useState(4)
+  const [endDate, setEndDate] = useState('')
   const [daysOfWeek, setDaysOfWeek] = useState<number[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -35,12 +34,12 @@ export default function EscalaPage({ params }: { params: { slug: string } }) {
     const res = await fetch(`/api/departments/${params.slug}/schedules`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ startDate, weeks, daysOfWeek }),
+      body: JSON.stringify({ startDate, endDate, daysOfWeek }),
     })
     const schedule = (await res.json()) as Schedule
     setSchedules((prev) => [schedule, ...prev])
     setStartDate('')
-    setWeeks(4)
+    setEndDate('')
     setDaysOfWeek([])
     setLoading(false)
   }
@@ -63,34 +62,27 @@ export default function EscalaPage({ params }: { params: { slug: string } }) {
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-5 mb-6">
         <h2 className="font-semibold text-gray-700 mb-4">Gerar Nova Escala</h2>
         <form onSubmit={handleCreate} className="flex flex-col gap-4">
-          <div>
-            <label className="text-sm text-gray-600 block mb-1">Data de início</label>
-            <input
-              type="date"
-              className="w-full border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              required
-            />
-          </div>
-          <div>
-            <label className="text-sm text-gray-600 block mb-2">Número de semanas</label>
-            <div className="flex flex-wrap gap-2">
-              {WEEKS_OPTIONS.map((w) => (
-                <button
-                  key={w}
-                  type="button"
-                  onClick={() => setWeeks(w)}
-                  className={`px-3 py-1.5 rounded-lg text-sm font-medium border transition-colors ${
-                    weeks === w
-                      ? 'text-white border-transparent'
-                      : 'text-gray-600 border-gray-300 hover:border-purple-400'
-                  }`}
-                  style={weeks === w ? { backgroundColor: '#534AB7' } : {}}
-                >
-                  {w} sem.
-                </button>
-              ))}
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-sm text-gray-600 block mb-1">Data de início</label>
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <label className="text-sm text-gray-600 block mb-1">Data de fim</label>
+              <input
+                type="date"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                value={endDate}
+                min={startDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                required
+              />
             </div>
           </div>
           <div>
@@ -115,7 +107,7 @@ export default function EscalaPage({ params }: { params: { slug: string } }) {
           </div>
           <button
             type="submit"
-            disabled={loading || daysOfWeek.length === 0 || !startDate}
+            disabled={loading || daysOfWeek.length === 0 || !startDate || !endDate}
             className="text-white font-semibold py-2.5 rounded-lg hover:opacity-90 transition-opacity disabled:opacity-50"
             style={{ backgroundColor: '#534AB7' }}
           >
