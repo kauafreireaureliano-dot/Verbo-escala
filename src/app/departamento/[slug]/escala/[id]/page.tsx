@@ -116,9 +116,19 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
 
   const weeks = groupByWeekAndDay(schedule.entries)
 
+  const totalDays = Object.values(weeks).reduce((acc, w) => acc + Object.keys(w).length, 0)
+
   return (
     <div>
-      <div className="mb-4">
+      {/* Cabeçalho de impressão — só aparece no PDF */}
+      <div className="hidden print:block text-center mb-8 pb-6 border-b-2 border-gray-300">
+        <div className="text-xs uppercase tracking-widest text-gray-400 mb-1">Departamento de {schedule.department.name}</div>
+        <h1 className="text-2xl font-bold text-gray-900">{schedule.name}</h1>
+        <p className="text-sm text-gray-500 mt-1">{totalDays} {totalDays === 1 ? 'dia de serviço' : 'dias de serviço'}</p>
+      </div>
+
+      {/* Cabeçalho normal — escondido no PDF */}
+      <div className="mb-4 print:hidden">
         <Link href={`/departamento/${schedule.department.slug}/escala`} className="text-sm text-purple-600 hover:underline">← Escalas</Link>
         <h1 className="text-xl font-bold text-gray-800 mt-1">{schedule.name}</h1>
       </div>
