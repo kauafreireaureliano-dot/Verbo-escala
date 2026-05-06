@@ -123,7 +123,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
         <h1 className="text-xl font-bold text-gray-800 mt-1">{schedule.name}</h1>
       </div>
 
-      <div className="flex flex-wrap gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6 print:hidden">
         <button
           onClick={copyWhatsApp}
           className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
@@ -177,10 +177,10 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
                               </span>
                               <span className="text-sm text-gray-800">{entry.person.name}</span>
                               {entry.isManual && (
-                                <span className="text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full">editado</span>
+                                <span className="print:hidden text-xs text-orange-600 bg-orange-100 px-1.5 py-0.5 rounded-full">editado</span>
                               )}
                             </div>
-                            <div className="flex items-center gap-1">
+                            <div className="print:hidden flex items-center gap-1">
                               <button
                                 onClick={() => { setSwapEntry(entry); setSwapPersonId('') }}
                                 className="text-xs px-2 py-1 rounded bg-purple-100 text-purple-700 hover:bg-purple-200"

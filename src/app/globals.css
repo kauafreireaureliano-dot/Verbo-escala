@@ -1,3 +1,10 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@media print {
+  header { display: none !important; }
+  body { background: white !important; }
+  .shadow-sm, .shadow-md { box-shadow: none !important; }
+  a[href]::after { content: none !important; }
+}
