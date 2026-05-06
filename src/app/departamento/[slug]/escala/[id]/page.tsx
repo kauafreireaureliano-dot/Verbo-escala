@@ -53,8 +53,8 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
       fetch(`/api/schedules/${params.id}`).then((r) => r.json()),
       fetch(`/api/departments/${params.slug}/people`).then((r) => r.json()),
     ])
-    setSchedule(s)
-    setPeople(p)
+    setSchedule(s as Schedule)
+    setPeople(p as Person[])
   }
 
   useEffect(() => { load() }, [params.id, params.slug])
@@ -79,7 +79,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
   async function openUnavail(entry: Entry) {
     setUnavailEntry(entry)
     const data = await fetch(`/api/people/${entry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data)
+    setUnavailabilities(data as Unavailability[])
   }
 
   async function addUnavail() {
@@ -90,7 +90,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
       body: JSON.stringify({ date: newUnavailDate }),
     })
     const data = await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data)
+    setUnavailabilities(data as Unavailability[])
     setNewUnavailDate('')
   }
 
@@ -98,7 +98,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
     if (!unavailEntry) return
     await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities/${unavId}`, { method: 'DELETE' })
     const data = await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data)
+    setUnavailabilities(data as Unavailability[])
   }
 
   function copyWhatsApp() {
@@ -208,7 +208,6 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
         })}
       </div>
 
-      {/* Swap Modal */}
       {swapEntry && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
@@ -245,7 +244,6 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
         </div>
       )}
 
-      {/* Unavailability Modal */}
       {unavailEntry && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">

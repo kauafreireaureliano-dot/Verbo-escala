@@ -31,8 +31,8 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
       fetch(`/api/departments/${params.slug}/people`).then((r) => r.json()),
       fetch(`/api/departments/${params.slug}/roles`).then((r) => r.json()),
     ]).then(([p, r]) => {
-      setPeople(p)
-      setRoles(r)
+      setPeople(p as Person[])
+      setRoles(r as Role[])
     })
   }, [params.slug])
 
@@ -74,7 +74,7 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
       })
     }
 
-    const updated = await fetch(`/api/departments/${params.slug}/people`).then((r) => r.json())
+    const updated = (await fetch(`/api/departments/${params.slug}/people`).then((r) => r.json())) as Person[]
     setPeople(updated)
     cancelEdit()
   }

@@ -12,7 +12,7 @@ export default function FuncoesPage({ params }: { params: { slug: string } }) {
   useEffect(() => {
     fetch(`/api/departments/${params.slug}/roles`)
       .then((r) => r.json())
-      .then(setRoles)
+      .then((data) => setRoles(data as Role[]))
   }, [params.slug])
 
   async function handleAdd(e: React.FormEvent) {
@@ -22,7 +22,7 @@ export default function FuncoesPage({ params }: { params: { slug: string } }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name }),
     })
-    const role = await res.json()
+    const role = (await res.json()) as Role
     setRoles((prev) => [...prev, role])
     setName('')
   }

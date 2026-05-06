@@ -18,7 +18,7 @@ export default function EscalaPage({ params }: { params: { slug: string } }) {
   useEffect(() => {
     fetch(`/api/departments/${params.slug}/schedules`)
       .then((r) => r.json())
-      .then(setSchedules)
+      .then((data) => setSchedules(data as Schedule[]))
   }, [params.slug])
 
   function toggleDay(day: number) {
@@ -35,7 +35,7 @@ export default function EscalaPage({ params }: { params: { slug: string } }) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, startDate, endDate, daysOfWeek }),
     })
-    const schedule = await res.json()
+    const schedule = (await res.json()) as Schedule
     setSchedules((prev) => [...prev, schedule])
     setName('')
     setStartDate('')

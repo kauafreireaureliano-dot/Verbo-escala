@@ -20,7 +20,7 @@ export default function DepartmentPage({ params }: { params: { slug: string } })
   useEffect(() => {
     fetch(`/api/departments/${params.slug}`)
       .then((r) => r.json())
-      .then(setDep)
+      .then((data) => setDep(data as Department))
   }, [params.slug])
 
   if (!dep) return <p className="text-gray-400">Carregando...</p>

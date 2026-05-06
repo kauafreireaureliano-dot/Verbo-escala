@@ -20,7 +20,7 @@ export default function Home() {
   useEffect(() => {
     fetch('/api/departments')
       .then((r) => r.json())
-      .then(setDepartments)
+      .then((data) => setDepartments(data as Department[]))
   }, [])
 
   async function handleCreate(e: React.FormEvent) {
@@ -31,7 +31,7 @@ export default function Home() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name, leaderName }),
     })
-    const dep = await res.json()
+    const dep = (await res.json()) as Department
     setLoading(false)
     router.push(`/departamento/${dep.slug}`)
   }
