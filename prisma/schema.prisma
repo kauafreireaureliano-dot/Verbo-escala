@@ -1,0 +1,82 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Department {
+  id          String     @id @default(cuid())
+  name        String
+  leaderName  String
+  slug        String     @unique
+  createdAt   DateTime   @default(now())
+  roles       Role[]
+  people      Person[]
+  schedules   Schedule[]
+}
+
+model Role {
+  id             String          @id @default(cuid())
+  name           String
+  departmentId   String
+  department     Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  personRoles    PersonRole[]
+  scheduleEntries ScheduleEntry[]
+}
+
+model Person {
+  id                  String               @id @default(cuid())
+  name                String
+  maxServicesPerWeek  Int                  @default(1)
+  departmentId        String
+  department          Department           @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  personRoles         PersonRole[]
+  scheduleEntries     ScheduleEntry[]
+  unavailabilities    PersonUnavailability[]
+}
+
+model PersonRole {
+  personId  String
+  roleId    String
+  person    Person @relation(fields: [personId], references: [id], onDelete: Cascade)
+  role      Role   @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([personId, roleId])
+}
+
+model Schedule {
+  id           String          @id @default(cuid())
+  name         String
+  departmentId String
+  startDate    DateTime
+  endDate      DateTime
+  daysOfWeek   String
+  createdAt    DateTime        @default(now())
+  department   Department      @relation(fields: [departmentId], references: [id], onDelete: Cascade)
+  entries      ScheduleEntry[]
+}
+
+model ScheduleEntry {
+  id         String   @id @default(cuid())
+  scheduleId String
+  date       DateTime
+  roleId     String
+  personId   String
+  isManual   Boolean  @default(false)
+  schedule   Schedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id])
+  person     Person   @relation(fields: [personId], references: [id])
+}
+
+model PersonUnavailability {
+  id       String   @id @default(cuid())
+  personId String
+  date     DateTime
+  person   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+
+  @@unique([personId, date])
+}
