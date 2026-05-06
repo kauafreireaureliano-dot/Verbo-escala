@@ -73,10 +73,10 @@ model ScheduleEntry {
 }
 
 model PersonUnavailability {
-  id       String   @id @default(cuid())
-  personId String
-  date     DateTime
-  person   Person   @relation(fields: [personId], references: [id], onDelete: Cascade)
+  id        String @id @default(cuid())
+  personId  String
+  dayOfWeek Int    // 0=Dom 1=Seg 2=Ter 3=Qua 4=Qui 5=Sex 6=Sáb
+  person    Person @relation(fields: [personId], references: [id], onDelete: Cascade)
 
-  @@unique([personId, date])
+  @@unique([personId, dayOfWeek])
 }

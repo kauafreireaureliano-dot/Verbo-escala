@@ -4,7 +4,7 @@ type PersonWithRoles = {
   name: string
   maxServicesPerWeek: number
   personRoles: { roleId: string }[]
-  unavailabilities: { date: Date }[]
+  unavailabilities: { dayOfWeek: number }[]
 }
 
 function getWeekKey(date: Date): string {
@@ -25,7 +25,6 @@ export function generateSchedule(
   const weeklyCount: Record<string, Record<string, number>> = {}
 
   for (const date of dates) {
-    const dateStr = date.toISOString().split('T')[0]
     const assignedToday = new Set<string>()
 
     for (const role of roles) {
@@ -41,9 +40,7 @@ export function generateSchedule(
       if (!weeklyCount[weekKey]) weeklyCount[weekKey] = {}
 
       const isUnavailable = (p: PersonWithRoles) =>
-        p.unavailabilities.some(
-          (u) => u.date.toISOString().split('T')[0] === dateStr
-        )
+        p.unavailabilities.some((u) => u.dayOfWeek === date.getDay())
 
       const isOverLimit = (p: PersonWithRoles) => {
         if (p.maxServicesPerWeek === 0) return false

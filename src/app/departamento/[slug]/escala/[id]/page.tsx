@@ -4,6 +4,7 @@ export const runtime = 'edge'
 
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 
 type Entry = {
   id: string
@@ -22,7 +23,6 @@ type Schedule = {
 }
 
 type Person = { id: string; name: string; personRoles: { roleId: string }[] }
-type Unavailability = { id: string; date: string }
 
 function groupByWeekAndDay(entries: Entry[]) {
   const weeks: Record<string, Record<string, Entry[]>> = {}
@@ -42,13 +42,12 @@ function groupByWeekAndDay(entries: Entry[]) {
 }
 
 export default function ScheduleViewPage({ params }: { params: { slug: string; id: string } }) {
+  const router = useRouter()
   const [schedule, setSchedule] = useState<Schedule | null>(null)
   const [people, setPeople] = useState<Person[]>([])
   const [swapEntry, setSwapEntry] = useState<Entry | null>(null)
   const [swapPersonId, setSwapPersonId] = useState('')
-  const [unavailEntry, setUnavailEntry] = useState<Entry | null>(null)
-  const [unavailabilities, setUnavailabilities] = useState<Unavailability[]>([])
-  const [newUnavailDate, setNewUnavailDate] = useState('')
+  const [regenerating, setRegenerating] = useState(false)
 
   async function load() {
     const [s, p] = await Promise.all([
@@ -78,29 +77,19 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
     load()
   }
 
-  async function openUnavail(entry: Entry) {
-    setUnavailEntry(entry)
-    const data = await fetch(`/api/people/${entry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data as Unavailability[])
+  async function handleRegenerate() {
+    if (!confirm('Regenerar apaga todas as entradas e redistribui com as disponibilidades atuais. Continuar?')) return
+    setRegenerating(true)
+    await fetch(`/api/schedules/${params.id}`, { method: 'PUT' })
+    await load()
+    setRegenerating(false)
   }
 
-  async function addUnavail() {
-    if (!unavailEntry || !newUnavailDate) return
-    await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ date: newUnavailDate }),
-    })
-    const data = await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data as Unavailability[])
-    setNewUnavailDate('')
-  }
-
-  async function removeUnavail(unavId: string) {
-    if (!unavailEntry) return
-    await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities/${unavId}`, { method: 'DELETE' })
-    const data = await fetch(`/api/people/${unavailEntry.person.id}/unavailabilities`).then((r) => r.json())
-    setUnavailabilities(data as Unavailability[])
+  async function handleDelete() {
+    if (!schedule) return
+    if (!confirm('Excluir esta escala permanentemente?')) return
+    await fetch(`/api/schedules/${params.id}`, { method: 'DELETE' })
+    router.push(`/departamento/${schedule.department.slug}/escala`)
   }
 
   function copyWhatsApp() {
@@ -109,7 +98,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
     const weeks = groupByWeekAndDay(schedule.entries)
     for (const weekKey of Object.keys(weeks).sort()) {
       const weekStart = new Date(weekKey + 'T00:00:00Z')
-      text += `*Semana de ${weekStart.toLocaleDateString('pt-BR')}*\n`
+      text += `*Semana de ${weekStart.toLocaleDateString('pt-BR', { timeZone: 'UTC' })}*\n`
       for (const dayKey of Object.keys(weeks[weekKey]).sort()) {
         const date = new Date(dayKey + 'T00:00:00Z')
         text += `  ${date.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })}:\n`
@@ -120,7 +109,7 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
       text += '\n'
     }
     navigator.clipboard.writeText(text)
-    alert('Escala copiada para o clipboard!')
+    alert('Escala copiada!')
   }
 
   if (!schedule) return <p className="text-gray-400">Carregando...</p>
@@ -131,21 +120,35 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
     <div>
       <div className="mb-4">
         <Link href={`/departamento/${schedule.department.slug}/escala`} className="text-sm text-purple-600 hover:underline">← Escalas</Link>
-        <h1 className="text-2xl font-bold text-gray-800 mt-1">{schedule.name}</h1>
+        <h1 className="text-xl font-bold text-gray-800 mt-1">{schedule.name}</h1>
       </div>
 
-      <div className="flex gap-2 mb-6">
+      <div className="flex flex-wrap gap-2 mb-6">
         <button
           onClick={copyWhatsApp}
-          className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
         >
           📋 WhatsApp
         </button>
         <button
           onClick={() => window.print()}
-          className="flex items-center gap-1 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-gray-300 text-gray-700 hover:bg-gray-50 text-sm font-medium"
         >
           🖨️ Imprimir
+        </button>
+        <button
+          onClick={handleRegenerate}
+          disabled={regenerating}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium disabled:opacity-50 transition-colors"
+          style={{ borderColor: '#534AB7', color: '#534AB7' }}
+        >
+          {regenerating ? 'Regenerando...' : '🔄 Regenerar'}
+        </button>
+        <button
+          onClick={handleDelete}
+          className="flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-200 text-red-500 hover:bg-red-50 text-sm font-medium ml-auto"
+        >
+          🗑️ Excluir
         </button>
       </div>
 
@@ -185,15 +188,8 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
                                 Trocar
                               </button>
                               <button
-                                onClick={() => openUnavail(entry)}
-                                className="text-base px-1.5 py-0.5 rounded hover:bg-red-100 text-red-500"
-                                title="Indisponibilidades"
-                              >
-                                🚫
-                              </button>
-                              <button
                                 onClick={() => handleRemoveEntry(entry.id)}
-                                className="text-base px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-500"
+                                className="text-base px-1.5 py-0.5 rounded hover:bg-gray-200 text-gray-400"
                               >
                                 ✕
                               </button>
@@ -208,12 +204,16 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
             </div>
           )
         })}
+        {Object.keys(weeks).length === 0 && (
+          <p className="text-gray-400 text-center py-8">Nenhuma entrada nesta escala.</p>
+        )}
       </div>
 
       {swapEntry && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-5 w-full max-w-sm">
-            <h3 className="font-semibold text-gray-800 mb-3">Trocar {swapEntry.role.name}</h3>
+            <h3 className="font-semibold text-gray-800 mb-1">Trocar pessoa</h3>
+            <p className="text-sm text-gray-500 mb-3">Função: {swapEntry.role.name}</p>
             <select
               className="w-full border border-gray-300 rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-purple-500"
               value={swapPersonId}
@@ -242,54 +242,6 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
                 Cancelar
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {unavailEntry && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-5 w-full max-w-sm">
-            <h3 className="font-semibold text-gray-800 mb-1">Indisponibilidades</h3>
-            <p className="text-sm text-gray-500 mb-4">{unavailEntry.person.name}</p>
-            <div className="flex gap-2 mb-4">
-              <input
-                type="date"
-                className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                value={newUnavailDate}
-                onChange={(e) => setNewUnavailDate(e.target.value)}
-              />
-              <button
-                onClick={addUnavail}
-                className="text-white px-3 py-2 rounded-lg font-medium text-sm"
-                style={{ backgroundColor: '#534AB7' }}
-              >
-                Adicionar
-              </button>
-            </div>
-            <div className="flex flex-col gap-1 max-h-40 overflow-y-auto mb-4">
-              {unavailabilities.map((u) => (
-                <div key={u.id} className="flex items-center justify-between bg-gray-50 rounded px-3 py-2">
-                  <span className="text-sm text-gray-700">
-                    {new Date(u.date + 'T00:00:00Z').toLocaleDateString('pt-BR', { timeZone: 'UTC' })}
-                  </span>
-                  <button
-                    onClick={() => removeUnavail(u.id)}
-                    className="text-red-400 hover:text-red-600 text-sm"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-              {unavailabilities.length === 0 && (
-                <p className="text-gray-400 text-sm text-center py-2">Nenhuma data cadastrada</p>
-              )}
-            </div>
-            <button
-              onClick={() => setUnavailEntry(null)}
-              className="w-full border border-gray-300 py-2 rounded-lg text-gray-600"
-            >
-              Fechar
-            </button>
           </div>
         </div>
       )}

@@ -57,8 +57,8 @@ CREATE TABLE IF NOT EXISTS "ScheduleEntry" (
 CREATE TABLE IF NOT EXISTS "PersonUnavailability" (
     "id" TEXT NOT NULL PRIMARY KEY,
     "personId" TEXT NOT NULL,
-    "date" DATETIME NOT NULL,
+    "dayOfWeek" INTEGER NOT NULL,
     CONSTRAINT "PersonUnavailability_personId_fkey" FOREIGN KEY ("personId") REFERENCES "Person" ("id") ON DELETE CASCADE ON UPDATE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS "PersonUnavailability_personId_date_key" ON "PersonUnavailability"("personId", "date");
+CREATE UNIQUE INDEX IF NOT EXISTS "PersonUnavailability_personId_dayOfWeek_key" ON "PersonUnavailability"("personId", "dayOfWeek");

@@ -11,6 +11,7 @@ type Person = {
   name: string
   maxServicesPerWeek: number
   personRoles: { role: { id: string; name: string } }[]
+  unavailabilities: { id: string; dayOfWeek: number }[]
 }
 
 const FREQ_OPTIONS = [
@@ -20,6 +21,8 @@ const FREQ_OPTIONS = [
   { label: 'Ilimitado', value: 0 },
 ]
 
+const DAYS = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
 export default function PessoasPage({ params }: { params: { slug: string } }) {
   const [people, setPeople] = useState<Person[]>([])
   const [roles, setRoles] = useState<Role[]>([])
@@ -27,16 +30,18 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
   const [selectedRoles, setSelectedRoles] = useState<string[]>([])
   const [maxServices, setMaxServices] = useState(1)
   const [editId, setEditId] = useState<string | null>(null)
+  const [availModal, setAvailModal] = useState<Person | null>(null)
 
-  useEffect(() => {
-    Promise.all([
+  async function loadAll() {
+    const [p, r] = await Promise.all([
       fetch(`/api/departments/${params.slug}/people`).then((r) => r.json()),
       fetch(`/api/departments/${params.slug}/roles`).then((r) => r.json()),
-    ]).then(([p, r]) => {
-      setPeople(p as Person[])
-      setRoles(r as Role[])
-    })
-  }, [params.slug])
+    ])
+    setPeople(p as Person[])
+    setRoles(r as Role[])
+  }
+
+  useEffect(() => { loadAll() }, [params.slug])
 
   function toggleRole(id: string) {
     setSelectedRoles((prev) =>
@@ -49,6 +54,7 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
     setName(person.name)
     setSelectedRoles(person.personRoles.map((pr) => pr.role.id))
     setMaxServices(person.maxServicesPerWeek)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   function cancelEdit() {
@@ -61,7 +67,6 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     const body = { name, maxServicesPerWeek: maxServices, roleIds: selectedRoles }
-
     if (editId) {
       await fetch(`/api/departments/${params.slug}/people/${editId}`, {
         method: 'PUT',
@@ -75,15 +80,31 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
         body: JSON.stringify(body),
       })
     }
-
-    const updated = (await fetch(`/api/departments/${params.slug}/people`).then((r) => r.json())) as Person[]
-    setPeople(updated)
+    await loadAll()
     cancelEdit()
   }
 
   async function handleDelete(id: string) {
+    if (!confirm('Excluir esta pessoa?')) return
     await fetch(`/api/departments/${params.slug}/people/${id}`, { method: 'DELETE' })
     setPeople((prev) => prev.filter((p) => p.id !== id))
+  }
+
+  async function toggleDayUnavail(person: Person, dayOfWeek: number) {
+    const existing = person.unavailabilities.find((u) => u.dayOfWeek === dayOfWeek)
+    if (existing) {
+      await fetch(`/api/people/${person.id}/unavailabilities/${existing.id}`, { method: 'DELETE' })
+    } else {
+      await fetch(`/api/people/${person.id}/unavailabilities`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ dayOfWeek }),
+      })
+    }
+    const updated = await fetch(`/api/departments/${params.slug}/people`).then((r) => r.json()) as Person[]
+    setPeople(updated)
+    const updatedPerson = updated.find((p) => p.id === person.id)
+    if (updatedPerson) setAvailModal(updatedPerson)
   }
 
   return (
@@ -121,6 +142,9 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
                   {role.name}
                 </button>
               ))}
+              {roles.length === 0 && (
+                <p className="text-sm text-gray-400">Cadastre funções primeiro.</p>
+              )}
             </div>
           </div>
           <div>
@@ -165,34 +189,88 @@ export default function PessoasPage({ params }: { params: { slug: string } }) {
       </div>
 
       <div className="flex flex-col gap-2">
-        {people.map((person) => (
-          <div key={person.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="font-semibold text-gray-800">{person.name}</h3>
-                <div className="flex flex-wrap gap-1 mt-1">
-                  {person.personRoles.map((pr) => (
-                    <span
-                      key={pr.role.id}
-                      className="text-xs px-2 py-0.5 rounded-full text-white"
-                      style={{ backgroundColor: '#534AB7' }}
-                    >
-                      {pr.role.name}
+        {people.map((person) => {
+          const unavailDays = person.unavailabilities.map((u) => u.dayOfWeek)
+          return (
+            <div key={person.id} className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
+              <div className="flex items-start justify-between">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-800">{person.name}</h3>
+                  <div className="flex flex-wrap gap-1 mt-1">
+                    {person.personRoles.map((pr) => (
+                      <span
+                        key={pr.role.id}
+                        className="text-xs px-2 py-0.5 rounded-full text-white"
+                        style={{ backgroundColor: '#534AB7' }}
+                      >
+                        {pr.role.name}
+                      </span>
+                    ))}
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">
+                      {person.maxServicesPerWeek === 0 ? 'Ilimitado' : `${person.maxServicesPerWeek}x/sem`}
                     </span>
-                  ))}
+                  </div>
+                  {unavailDays.length > 0 && (
+                    <p className="text-xs text-red-500 mt-1.5">
+                      Indisponível: {unavailDays.map((d) => DAYS[d]).join(', ')}
+                    </p>
+                  )}
+                </div>
+                <div className="flex gap-2 text-sm ml-2 shrink-0 items-center">
+                  <button
+                    onClick={() => setAvailModal(person)}
+                    className="text-lg text-gray-400 hover:text-purple-600 transition-colors"
+                    title="Editar disponibilidade"
+                  >
+                    📅
+                  </button>
+                  <button onClick={() => startEdit(person)} className="text-purple-600 hover:underline">Editar</button>
+                  <button onClick={() => handleDelete(person.id)} className="text-red-400 hover:text-red-600">Excluir</button>
                 </div>
               </div>
-              <div className="flex gap-2 text-sm">
-                <button onClick={() => startEdit(person)} className="text-purple-600 hover:underline">Editar</button>
-                <button onClick={() => handleDelete(person.id)} className="text-red-400 hover:text-red-600">Excluir</button>
-              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
         {people.length === 0 && (
           <p className="text-gray-400 text-center py-8">Nenhuma pessoa cadastrada ainda.</p>
         )}
       </div>
+
+      {availModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-5 w-full max-w-sm">
+            <h3 className="font-semibold text-gray-800 mb-1">Disponibilidade semanal</h3>
+            <p className="text-sm text-gray-500 mb-3">{availModal.name}</p>
+            <p className="text-xs text-gray-400 mb-3">
+              Marque os dias em que esta pessoa <strong className="text-red-500">não pode</strong> servir:
+            </p>
+            <div className="grid grid-cols-7 gap-1 mb-5">
+              {DAYS.map((day, idx) => {
+                const isUnavail = availModal.unavailabilities.some((u) => u.dayOfWeek === idx)
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => toggleDayUnavail(availModal, idx)}
+                    className={`py-2 rounded-lg text-xs font-medium border transition-colors ${
+                      isUnavail
+                        ? 'bg-red-100 text-red-600 border-red-300'
+                        : 'text-gray-600 border-gray-200 hover:border-purple-400'
+                    }`}
+                  >
+                    {day}
+                  </button>
+                )
+              })}
+            </div>
+            <button
+              onClick={() => setAvailModal(null)}
+              className="w-full border border-gray-300 py-2 rounded-lg text-gray-600 hover:bg-gray-50"
+            >
+              Fechar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

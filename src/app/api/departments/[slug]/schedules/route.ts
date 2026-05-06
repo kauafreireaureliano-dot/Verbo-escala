@@ -23,10 +23,15 @@ export async function POST(request: Request, { params }: { params: { slug: strin
   const dep = await prisma.department.findUnique({ where: { slug: params.slug } })
   if (!dep) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
-  const { name, startDate, endDate, daysOfWeek } = await request.json() as { name: string; startDate: string; endDate: string; daysOfWeek: number[] }
+  const { startDate, weeks, daysOfWeek } = await request.json() as { startDate: string; weeks: number; daysOfWeek: number[] }
 
   const start = new Date(startDate)
-  const end = new Date(endDate)
+  const end = new Date(start)
+  end.setDate(end.getDate() + weeks * 7 - 1)
+
+  const startFmt = start.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', timeZone: 'UTC' })
+  const endFmt = end.toLocaleDateString('pt-BR', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' })
+  const name = `Escala ${startFmt} – ${endFmt}`
   const dates: Date[] = []
   const current = new Date(start)
   while (current <= end) {
