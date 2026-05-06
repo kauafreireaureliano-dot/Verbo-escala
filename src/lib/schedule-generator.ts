@@ -23,18 +23,20 @@ export function generateSchedule(
   const entries: { date: Date; roleId: string; personId: string }[] = []
   const rotationIndex: Record<string, number> = {}
   const weeklyCount: Record<string, Record<string, number>> = {}
+  // Tracks which index in `dates` each person last served on
+  const lastServedIdx: Record<string, number> = {}
 
-  for (const date of dates) {
+  for (let dateIdx = 0; dateIdx < dates.length; dateIdx++) {
+    const date = dates[dateIdx]
     const assignedToday = new Set<string>()
 
     for (const role of roles) {
       const eligible = people.filter((p) =>
         p.personRoles.some((pr) => pr.roleId === role.id)
       )
-
       if (eligible.length === 0) continue
 
-      if (!rotationIndex[role.id]) rotationIndex[role.id] = 0
+      if (rotationIndex[role.id] === undefined) rotationIndex[role.id] = 0
 
       const weekKey = getWeekKey(date)
       if (!weeklyCount[weekKey]) weeklyCount[weekKey] = {}
@@ -44,25 +46,43 @@ export function generateSchedule(
 
       const isOverLimit = (p: PersonWithRoles) => {
         if (p.maxServicesPerWeek === 0) return false
-        const count = weeklyCount[weekKey][p.id] || 0
-        return count >= p.maxServicesPerWeek
+        return (weeklyCount[weekKey][p.id] || 0) >= p.maxServicesPerWeek
+      }
+
+      // Served on the immediately previous service date
+      const servedLastDate = (p: PersonWithRoles) => {
+        const last = lastServedIdx[p.id]
+        return last !== undefined && dateIdx - last <= 1
       }
 
       let assigned: PersonWithRoles | null = null
       const startIdx = rotationIndex[role.id] % eligible.length
 
-      // First pass: respect all constraints
+      // Pass 1: all constraints (no unavailable, no over limit, not today, not last date)
       for (let i = 0; i < eligible.length; i++) {
         const idx = (startIdx + i) % eligible.length
         const person = eligible[idx]
-        if (!isUnavailable(person) && !isOverLimit(person) && !assignedToday.has(person.id)) {
+        if (!isUnavailable(person) && !isOverLimit(person) && !assignedToday.has(person.id) && !servedLastDate(person)) {
           assigned = person
           rotationIndex[role.id] = (idx + 1) % eligible.length
           break
         }
       }
 
-      // Second pass: relax "already assigned today" constraint
+      // Pass 2: relax "served last date" — allow consecutive if needed
+      if (!assigned) {
+        for (let i = 0; i < eligible.length; i++) {
+          const idx = (startIdx + i) % eligible.length
+          const person = eligible[idx]
+          if (!isUnavailable(person) && !isOverLimit(person) && !assignedToday.has(person.id)) {
+            assigned = person
+            rotationIndex[role.id] = (idx + 1) % eligible.length
+            break
+          }
+        }
+      }
+
+      // Pass 3: relax "already assigned today" too
       if (!assigned) {
         for (let i = 0; i < eligible.length; i++) {
           const idx = (startIdx + i) % eligible.length
@@ -79,6 +99,7 @@ export function generateSchedule(
         entries.push({ date, roleId: role.id, personId: assigned.id })
         assignedToday.add(assigned.id)
         weeklyCount[weekKey][assigned.id] = (weeklyCount[weekKey][assigned.id] || 0) + 1
+        lastServedIdx[assigned.id] = dateIdx
       }
     }
   }
