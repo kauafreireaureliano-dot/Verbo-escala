@@ -1,0 +1,1 @@
+ALTER TABLE "Department" ADD COLUMN "notes" TEXT NOT NULL DEFAULT '';

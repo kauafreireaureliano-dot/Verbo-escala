@@ -11,7 +11,8 @@
     "pages:build": "npx @cloudflare/next-on-pages",
     "pages:deploy": "wrangler pages deploy",
     "db:migrate:local": "wrangler d1 execute escala-verbo-db --local --file=prisma/migrations/0001_init.sql",
-    "db:migrate:prod": "wrangler d1 execute escala-verbo-db --file=prisma/migrations/0001_init.sql"
+    "db:migrate:prod": "wrangler d1 execute escala-verbo-db --remote --file=prisma/migrations/0001_init.sql",
+    "db:migrate2:prod": "wrangler d1 execute escala-verbo-db --remote --file=prisma/migrations/0002_add_notes.sql"
   },
   "dependencies": {
     "next": "14.1.0",

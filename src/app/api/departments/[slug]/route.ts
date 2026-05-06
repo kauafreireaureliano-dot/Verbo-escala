@@ -16,3 +16,24 @@ export async function GET(_request: Request, { params }: { params: { slug: strin
     return NextResponse.json({ error: String(e) }, { status: 500 })
   }
 }
+
+export async function PATCH(request: Request, { params }: { params: { slug: string } }) {
+  try {
+    const db = getDB()
+    const { notes } = await request.json() as { notes: string }
+    await db.prepare('UPDATE "Department" SET notes = ? WHERE slug = ?').bind(notes ?? '', params.slug).run()
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
+}
+
+export async function DELETE(_request: Request, { params }: { params: { slug: string } }) {
+  try {
+    const db = getDB()
+    await db.prepare('DELETE FROM "Department" WHERE slug = ?').bind(params.slug).run()
+    return NextResponse.json({ ok: true })
+  } catch (e) {
+    return NextResponse.json({ error: String(e) }, { status: 500 })
+  }
+}
