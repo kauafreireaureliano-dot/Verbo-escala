@@ -121,10 +121,11 @@ export default function ScheduleViewPage({ params }: { params: { slug: string; i
   return (
     <div>
       {/* Cabeçalho de impressão — só aparece no PDF */}
-      <div className="hidden print:block text-center mb-8 pb-6 border-b-2 border-gray-300">
-        <div className="text-xs uppercase tracking-widest text-gray-400 mb-1">Departamento de {schedule.department.name}</div>
-        <h1 className="text-2xl font-bold text-gray-900">{schedule.name}</h1>
-        <p className="text-sm text-gray-500 mt-1">{totalDays} {totalDays === 1 ? 'dia de serviço' : 'dias de serviço'}</p>
+      <div className="hidden print:block text-center mb-8 pb-5 border-b border-gray-200">
+        <p className="text-xs uppercase tracking-widest text-gray-400 mb-2">Igreja Verbo da Vida</p>
+        <h1 className="text-4xl font-black text-gray-900 leading-tight">Departamento de {schedule.department.name}</h1>
+        <p className="text-base font-medium text-gray-600 mt-2">{schedule.name}</p>
+        <p className="text-xs text-gray-400 mt-1">{totalDays} {totalDays === 1 ? 'dia de serviço' : 'dias de serviço'}</p>
       </div>
 
       {/* Cabeçalho normal — escondido no PDF */}
